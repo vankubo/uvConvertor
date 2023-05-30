@@ -1,0 +1,9 @@
+[submodule "tinyxml2"]
+	path = tinyxml2
+	url = https://github.com/leethomason/tinyxml2.git
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git
+[submodule "CLI11"]
+	path = CLI11
+	url = https://github.com/CLIUtils/CLI11.git
