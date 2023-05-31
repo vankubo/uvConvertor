@@ -14,7 +14,7 @@ using namespace nlohmann;
 using namespace std;
 
 
-void Stringsplit(const string& str, const string& split, list<string>& res)
+void StringSplit(const string& str, const string& split, list<string>& res)
 {
 	//std::regex ws_re("\\s+"); // 正则表达式,匹配空格 
 	std::regex reg(split);		// 匹配split
@@ -30,6 +30,45 @@ void StringReplace(string& str,const string& pat,const string& fmt)
 {
 	regex pattern(pat);
     str=regex_replace(str, pattern, fmt);
+}
+
+void RemoveRedundancyPath(string&  str)
+{
+	list<string> res;
+	list<string> pathItem;
+	StringSplit(str, "/", res);
+	regex pattern("[.]{2}");
+	regex pattern1("[.]{1}");
+	for(list<string>::iterator it=res.begin();it!=res.end();it++)
+	{
+		if(regex_match(*it,pattern1))
+		{
+			continue;
+		}
+
+		if(!regex_match(*it,pattern))
+		{
+			pathItem.push_back(*it);
+		}
+		else 
+		{
+			pathItem.pop_back();
+		}
+	}
+
+	str.clear();
+	for(list<string>::iterator it=pathItem.begin();it!=pathItem.end();it++)
+	{
+		if(std::next(it) == pathItem.end())
+		{
+			str+=(*it);
+		}
+		else {
+		str+=(*it)+"/";
+		}
+			
+	}
+
 }
 
 class uVConvertor
@@ -60,7 +99,7 @@ uVConvertor::uVConvertor(string uvProjx)
 	XMLDocument doc;
 	if(doc.LoadFile( uvProjx.c_str() )!=0)
 	{
-	cout<<doc.ErrorID()<<endl;
+	//cout<<doc.ErrorID()<<endl;
 		return;
 	}
 	//2.找到根节点
@@ -68,23 +107,23 @@ uVConvertor::uVConvertor(string uvProjx)
 	if (xmlroot == NULL) {
     	return;
 	}
-	cout<<"root:"<<xmlroot->Name()<<endl; 
+	//cout<<"root:"<<xmlroot->Name()<<endl; 
 	//3.获取子节点信息
 	//include
 	tinyxml2::XMLElement* includePath = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("TargetOption") \
 										 ->FirstChildElement("TargetArmAds")->FirstChildElement("Cads")->FirstChildElement("VariousControls") \
 										 ->FirstChildElement("IncludePath");
 	std::string inc = includePath->GetText();
-	cout<<"IncludePath:"<<inc<<endl;
-	Stringsplit(inc,";" ,incList);
+	//cout<<"IncludePath:"<<inc<<endl;
+	StringSplit(inc,";" ,incList);
 
 	///define
 	tinyxml2::XMLElement* define = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("TargetOption") \
 										 ->FirstChildElement("TargetArmAds")->FirstChildElement("Cads")->FirstChildElement("VariousControls") \
 										 ->FirstChildElement("Define");
 	std::string def = define->GetText();
-	cout<<"Defines:"<<def<<endl;
-	Stringsplit(def,"," ,defList);
+	//cout<<"Defines:"<<def<<endl;
+	StringSplit(def,"," ,defList);
 	///src
 	tinyxml2::XMLElement* groups = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("Groups");
 	tinyxml2::XMLElement* group;
@@ -95,12 +134,12 @@ uVConvertor::uVConvertor(string uvProjx)
 	{
 		groupname=group->FirstChildElement("GroupName");
 		f=groupname->GetText();
-		cout<<"->:"<<f<<endl;
+		//cout<<"->:"<<f<<endl;
 		tinyxml2::XMLElement* file=group->FirstChildElement("Files")->FirstChildElement("File");
 		while(file!=nullptr)
 		{
 			tinyxml2::XMLElement* filePath=file->FirstChildElement("FilePath");
-			cout<<"----"<<filePath->GetText()<<endl;
+			//cout<<"----"<<filePath->GetText()<<endl;
 			fileList.push_back(filePath->GetText());
 			file=file->NextSiblingElement("File");
 		}
@@ -109,17 +148,19 @@ uVConvertor::uVConvertor(string uvProjx)
 	}
 	
 	//conv to abs path
+	//remove redundancy path
 	for (std::list<string>::iterator it = incList.begin(); it != incList.end(); ++it) {
        *it=ifPath+"\\"+*it;
 
 	   StringReplace(*it,"\\\\","/");
-	   
+	   RemoveRedundancyPath(*it);
     }
 	for (std::list<string>::iterator it = fileList.begin(); it != fileList.end(); ++it) {
         *it=ifPath+"\\"+*it;
 		 StringReplace(*it,"\\\\","/");
-	   
+	   	RemoveRedundancyPath(*it);
     }
+	
 	
 }
 
@@ -175,7 +216,10 @@ void uVConvertor::toCompileJson(string outPath,string extOptions)
 		*it=p.lexically_relative(outPath).string();
 		StringReplace(*it,"\\\\","/");
     }
-	//remove redundancy path
+	
+	//extern options
+	list<string> extop;
+	StringSplit(extOptions,",",extop);
 
 	//export to json
 	json	 j,j1;
@@ -190,26 +234,28 @@ void uVConvertor::toCompileJson(string outPath,string extOptions)
 		for (std::list<string>::iterator inc = incList.begin(); inc != incList.end(); ++inc) {
         j1["arguments"].push_back("-I"+*inc);
     	}
+			//def
 		for (std::list<string>::iterator def = defList.begin(); def != defList.end(); ++def) {
         j1["arguments"].push_back("-D"+*def);
     	}
+			//extern options
+		if(extop.size()!=0)
+		{
+			for (std::list<string>::iterator e = extop.begin(); e != extop.end(); ++e) 
+			{
+        		j1["arguments"].push_back(*e);
+    		}
+		}
+		
 
 		j.push_back(j1);
     }
 	
 	
 	// write prettified JSON to another file
-	std::ofstream o(outPath+"\\pretty.json");
+	std::ofstream o(outPath+"\\compile_commands.json");
 	o << std::setw(4) << j << std::endl;
 
-	cout<<"-------------------------------"<<endl;
-#if 0
-	fs::path p=fs::current_path(); 
-    std::cout << "The current path " << p << " decomposes into:\n"
-              << "root-path " << p.root_path() << '\n'
-              << "relative path " << p.relative_path() << '\n'
-			  << "relative to:"<<p.lexically_relative("D:\\PROJECT\\C++\\freetype\\FontMap\\build");
-#endif
 }
 
 
@@ -243,10 +289,8 @@ int main(int argc, char **argv)
 	cout<<"-------------------------------"<<endl;
 #endif
 	uVConvertor uvc(inputFile);
-	uvc.printItems();
-	uvc.toCompileJson(outputFile);
-
-	
+	//uvc.printItems();
+	uvc.toCompileJson(outputFile,extOptions);
 	
 	
 	return 0;
