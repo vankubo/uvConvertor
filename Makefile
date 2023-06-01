@@ -7,7 +7,7 @@ XCC =clang++
 LD =clang++
 SZ=llvm-size
 
-TARGET = prog
+TARGET = uvConvertor-CLI
 
 #===========
 DEFS = \
