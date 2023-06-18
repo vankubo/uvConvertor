@@ -74,7 +74,7 @@ void RemoveRedundancyPath(string&  str)
 class uVConvertor
 {
 	public:
-	uVConvertor(string uvprojx);
+	uVConvertor(string uvprojx, string target);
 	~uVConvertor();
 	void toCompileJson(string outPath,string extOptions="");
 	void printItems();
@@ -91,7 +91,7 @@ class uVConvertor
   *  @note      
   *  @Sample usage:      
  **************************************************************/
-uVConvertor::uVConvertor(string uvProjx)
+uVConvertor::uVConvertor(string uvProjx, string target)
 {
 	fs::path p(uvProjx);
 	ifPath=p.parent_path().string();
@@ -107,10 +107,32 @@ uVConvertor::uVConvertor(string uvProjx)
 	if (xmlroot == NULL) {
     	return;
 	}
-	//cout<<"root:"<<xmlroot->Name()<<endl; 
+	//cout<<"root:"<<xmlroot->Name()<<endl;
+
+	tinyxml2::XMLElement* target_elm;
+	if (target != "") {
+		while (true) {
+			target_elm = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target");
+			if (!target_elm) {
+				break;
+			}
+			if (target_elm->FirstChildElement("TargetName")->GetText() == target) {
+				break;
+			}
+			xmlroot->FirstChildElement("Targets")->DeleteChild(target_elm);
+		};
+		if (!target_elm) {
+			cout<<"error: target <"<<target<<"> not found!"<<endl;
+			return;
+		}
+
+	} else {
+		target_elm = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target");
+	}
+
 	//3.获取子节点信息
 	//include
-	tinyxml2::XMLElement* includePath = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("TargetOption") \
+	tinyxml2::XMLElement* includePath = target_elm->FirstChildElement("TargetOption") \
 										 ->FirstChildElement("TargetArmAds")->FirstChildElement("Cads")->FirstChildElement("VariousControls") \
 										 ->FirstChildElement("IncludePath");
 	std::string inc = includePath->GetText();
@@ -118,7 +140,7 @@ uVConvertor::uVConvertor(string uvProjx)
 	StringSplit(inc,";" ,incList);
 
 	///define
-	tinyxml2::XMLElement* define = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("TargetOption") \
+	tinyxml2::XMLElement* define = target_elm->FirstChildElement("TargetOption") \
 										 ->FirstChildElement("TargetArmAds")->FirstChildElement("Cads")->FirstChildElement("VariousControls") \
 										 ->FirstChildElement("Define");
 	std::string def = define->GetText();
@@ -272,6 +294,9 @@ int main(int argc, char **argv)
     std::string inputFile;
     CLI::Option *opt = app.add_option("-f,--file", inputFile, "uvProject File name")->check(CLI::ExistingFile)->required();
 
+	std::string target;
+    CLI::Option *topt = app.add_option("-t,--target", target, "uvProject target name");
+
 	std::string outputFile;
     CLI::Option *copt = app.add_option("-o,--output",outputFile, "Output path")->check(CLI::ExistingDirectory);
 
@@ -279,16 +304,24 @@ int main(int argc, char **argv)
 	app.add_option("-e,--extoptions",extOptions,"External Options");
 	
     CLI11_PARSE(app, argc, argv);
+
+	// convertor to absolute path
+	fs::path in_path(inputFile);
+	inputFile = std::filesystem::absolute(in_path).string();
+
+	fs::path out_path(outputFile);
+	outputFile = std::filesystem::absolute(outputFile).string();
+
 #if DEBUG
 	cout<<"-------------------------------"<<endl;
     cout<<"input file:"<<inputFile<<endl;
 	cout<<"output file:"<<outputFile<<endl;
 	
-		cout<<"ext options"<<extOptions<<endl;
+		cout<<"ext options:"<<extOptions<<endl;
 	
 	cout<<"-------------------------------"<<endl;
 #endif
-	uVConvertor uvc(inputFile);
+	uVConvertor uvc(inputFile, target);
 	//uvc.printItems();
 	uvc.toCompileJson(outputFile,extOptions);
 	
