@@ -18,8 +18,16 @@ uvConvertor-CLI.exe -f  <path to .uvprojx file> -o <output path> [-e] <external 
 
 ## Build：
 
+### Makefile
+
 It write under C++17,compiled with clang++. You can modify the project in Makefile.
 
 * Bild with cmd line `make`
 
+### Cmake
 
+* Go into folder `build`
+
+* `cmake .. -G"Unix Makefiles"`
+
+* `make`
