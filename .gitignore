@@ -1,4 +1,5 @@
 build
+c-build
 *.exe
 .cache
 compile_commands.json

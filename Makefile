@@ -25,6 +25,7 @@ CXX_SOURCES = \
 main.cpp \
 uvconvertor.cpp \
 tinyxml2/tinyxml2.cpp \
+utils.cpp
 
 C_SOURCES = \
 

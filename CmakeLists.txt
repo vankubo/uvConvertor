@@ -1,0 +1,28 @@
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
+cmake_minimum_required(VERSION 3.19)
+set(CMAKE_BUILD_TYPE Release)
+
+#export compile_commands.json
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+project(main)
+set(CLI11_DIR CLI11)
+set(JSON_DIR json)
+set(TINYXML_DIR tinyxml2)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+
+#library
+#CLI11
+include_directories(${CLI11_DIR}/include)
+#JSON
+include_directories(${JSON_DIR}/include)
+#TYNYXML
+include_directories(${TINYXML_DIR})
+
+
+#target
+set(SOURCE_FILES main.cpp uvconvertor.cpp utils.cpp ${TINYXML_DIR}/tinyxml2.cpp)
+SET(EXECUTABLE_OUTPUT_PATH ..)
+add_executable(uvConvertor-CLI ${SOURCE_FILES})
+#set_target_properties(prog PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
