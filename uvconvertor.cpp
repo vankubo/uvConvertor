@@ -77,6 +77,7 @@ uVConvertor::uVConvertor(std::string uvProjx, std::string target)
 	tinyxml2::XMLElement* groups = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("Groups");
 	tinyxml2::XMLElement* group;
 	tinyxml2::XMLElement* groupname;
+	tinyxml2::XMLElement* file;
 	group=groups->FirstChildElement("Group");
 	std::string f;
 	while(group!=nullptr)
@@ -84,7 +85,13 @@ uVConvertor::uVConvertor(std::string uvProjx, std::string target)
 		groupname=group->FirstChildElement("GroupName");
 		f=groupname->GetText();
 		//cout<<"->:"<<f<<std::endl;
-		tinyxml2::XMLElement* file=group->FirstChildElement("Files")->FirstChildElement("File");
+		tinyxml2::XMLElement* files=group->FirstChildElement("Files");
+		if (files!=nullptr) {
+			file=files->FirstChildElement("File");
+		} else {
+			file=nullptr;
+		}
+
 		while(file!=nullptr)
 		{
 			tinyxml2::XMLElement* filePath=file->FirstChildElement("FilePath");
