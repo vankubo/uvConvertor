@@ -86,11 +86,14 @@ uVConvertor::uVConvertor(std::string uvProjx, std::string target)
 		f=groupname->GetText();
 		//cout<<"->:"<<f<<std::endl;
 		tinyxml2::XMLElement* files=group->FirstChildElement("Files");
+		/*
 		if (files!=nullptr) {
 			file=files->FirstChildElement("File");
 		} else {
 			file=nullptr;
 		}
+		*/
+		file=(files==nullptr)?nullptr:(files->FirstChildElement("File"));
 
 		while(file!=nullptr)
 		{
