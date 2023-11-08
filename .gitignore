@@ -2,4 +2,6 @@ build
 c-build
 *.exe
 .cache
+.vscode
+.xmake
 compile_commands.json
