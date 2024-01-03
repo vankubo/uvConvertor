@@ -1,4 +1,4 @@
-#include "utils.hpp"
+﻿#include "utils.hpp"
 
 void StringSplit(const std::string& str, const std::string& split, std::list<std::string>& res)
 {

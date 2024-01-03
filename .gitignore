@@ -5,3 +5,6 @@ c-build
 .vscode
 .xmake
 compile_commands.json
+Debug
+Release
+.vs
