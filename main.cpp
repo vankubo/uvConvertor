@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include "uvconvertor.hpp"
 #include <filesystem>
 #include <CLI/CLI.hpp>
@@ -47,6 +47,7 @@ int main(int argc, char **argv)
 	//uvc.printItems();
 	uvc.toCompileJson(outputFile,extOptions);
 	
+	cout << "Done." << endl;
 	
 	return 0;
 }

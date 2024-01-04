@@ -17,8 +17,7 @@ class uVConvertor
 	void toCompileJson(std::string outPath,std::string extOptions="");
 	void printItems();
 	private:
-	std::list<std::string> defList;
-	std::list<std::string> fileList;
-	std::list<std::string> incList;
+	std::list<std::string> m_fileList;
+	std::list<std::list<std::string>> m_argumentsList;
 	std::string ifPath;
 };

@@ -1,12 +1,11 @@
-#include "uvconvertor.hpp"
+﻿#include "uvconvertor.hpp"
 #include "tinyxml2/tinyxml2.h"
 #include "nlohmann/json.hpp"
 #include <iostream>
 #include <fstream>
 #include "utils.hpp"
 #include <string>
-
-
+#include <regex>
 
 namespace fs=std::filesystem;
 using namespace tinyxml2;
@@ -57,70 +56,97 @@ uVConvertor::uVConvertor(std::string uvProjx, std::string target)
 		target_elm = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target");
 	}
 
-	//3.获取子节点信息
-	//include
-	tinyxml2::XMLElement* includePath = target_elm->FirstChildElement("TargetOption") \
-										 ->FirstChildElement("TargetArmAds")->FirstChildElement("Cads")->FirstChildElement("VariousControls") \
-										 ->FirstChildElement("IncludePath");
-	std::string inc = includePath->GetText();
-	//cout<<"IncludePath:"<<inc<<std::endl;
-	StringSplit(inc,";" ,incList);
+	tinyxml2::XMLElement* outputDirectory = target_elm->FirstChildElement("TargetOption") \
+											->FirstChildElement("TargetCommonOption")->FirstChildElement("OutputDirectory");
 
-	///define
-	tinyxml2::XMLElement* define = target_elm->FirstChildElement("TargetOption") \
-										 ->FirstChildElement("TargetArmAds")->FirstChildElement("Cads")->FirstChildElement("VariousControls") \
-										 ->FirstChildElement("Define");
-	std::string def = define->GetText();
-	//cout<<"Defines:"<<def<<std::endl;
-	StringSplit(def,"," ,defList);
-	///src
-	tinyxml2::XMLElement* groups = xmlroot->FirstChildElement("Targets")->FirstChildElement("Target")->FirstChildElement("Groups");
-	tinyxml2::XMLElement* group;
-	tinyxml2::XMLElement* groupname;
-	tinyxml2::XMLElement* file;
-	group=groups->FirstChildElement("Group");
-	std::string f;
-	while(group!=nullptr)
+	tinyxml2::XMLElement* outputName = target_elm->FirstChildElement("TargetOption") \
+											->FirstChildElement("TargetCommonOption")->FirstChildElement("OutputName");
+
+	// 获取编译生成的build.log.htm文件位置
+	std::string buildLogHtmPath;
+	buildLogHtmPath.append(ifPath + "/").append(outputDirectory->GetText()).append(outputName->GetText()).append(".build_log.htm");
+
+	// 获取编译生成的dep文件位置
+	std::string depFilePath;
+	depFilePath.append(ifPath + "/").append(outputDirectory->GetText())
+		.append(p.filename().replace_extension().string()).append("_")
+		.append(target_elm->FirstChildElement("TargetName")->GetText()).append(".dep");
+
+	// 提示编译获取编译日志文件
+	if (!fs::exists(depFilePath))
 	{
-		groupname=group->FirstChildElement("GroupName");
-		f=groupname->GetText();
-		//cout<<"->:"<<f<<std::endl;
-		tinyxml2::XMLElement* files=group->FirstChildElement("Files");
-		/*
-		if (files!=nullptr) {
-			file=files->FirstChildElement("File");
-		} else {
-			file=nullptr;
-		}
-		*/
-		file=(files==nullptr)?nullptr:(files->FirstChildElement("File"));
-
-		while(file!=nullptr)
-		{
-			tinyxml2::XMLElement* filePath=file->FirstChildElement("FilePath");
-			//cout<<"----"<<filePath->GetText()<<std::endl;
-			fileList.push_back(filePath->GetText());
-			file=file->NextSiblingElement("File");
-		}
-
-		group=group->NextSiblingElement("Group");
+		std::cout << "[Failed] File:\"" << fs::absolute(depFilePath).string() << "\" not exist!" << std::endl;
+		std::cout << "\n\nPlease compile first!!!\n" << std::endl;
 	}
-	
-	//conv to abs path
-	//remove redundancy path
-	for (std::list<std::string>::iterator it = incList.begin(); it != incList.end(); ++it) {
-       *it=ifPath+"\\"+*it;
+	else
+	{
+		// 解析编译日志文件，提取编译依赖
+		std::ifstream depFile(depFilePath, std::ifstream::in);
+		std::vector<std::string> buildDepStringList;
+		//std::cout << "Load : " << fs::absolute(depFilePath).string() << " Successful!" << std::endl;
+		while (depFile.good())
+		{
+			std::string lineStr;
+			getline(depFile, lineStr);
 
-	   StringReplace(*it,"\\\\","/");
-	   RemoveRedundancyPath(*it);
-    }
-	for (std::list<std::string>::iterator it = fileList.begin(); it != fileList.end(); ++it) {
-        *it=ifPath+"\\"+*it;
-		 StringReplace(*it,"\\\\","/");
-	   	RemoveRedundancyPath(*it);
-    }
-	
-	
+			if (lineStr.find("F") == 0)
+			{
+				StringReplace(lineStr, "F \\(", "");		// 去除开头的F (
+				StringReplace(lineStr, "\r", " ");		// 去除行尾的回车，巨坑，dep文件 F开头的行中，明明换行了，但是只有回车
+				StringReplace(lineStr, " -", "  -");		// 为每个参数选项之间的空格增加一个空格，防止路径中含有空格导致参数分割错误。
+				StringReplace(lineStr, "-I \"{0,1}", "-I");	// 去除-I后面的空格和"字符
+				StringReplace(lineStr, "\\(0x[[:xdigit:]]+\\)", "");	// 去除不需要的地址
+				StringReplace(lineStr, "\\\\", "/");					// 所有的\\替换为/
+				lineStr.erase(lineStr.end() - 1);
+
+				buildDepStringList.push_back(lineStr);
+			}
+		}
+		depFile.close();
+
+		// 获取编译器所在路径
+		std::ifstream buildLogHtmFile(buildLogHtmPath, std::ifstream::in);
+		std::regex toolchainReg("Toolchain Path:.*");
+		std::string toolchainPath;
+		while (buildLogHtmFile.good())
+		{
+			std::string lineStr;
+			getline(buildLogHtmFile, lineStr);
+			if (std::regex_match(lineStr, toolchainReg))
+			{
+				StringReplace(lineStr, "(Bin|bin)", "Include");
+				StringReplace(lineStr, "Toolchain Path:  ", "-I");
+				StringReplace(lineStr, "\\\\", "/");
+				toolchainPath = lineStr;
+				break;
+			}
+		}
+		buildLogHtmFile.close();
+
+		// 提取所有参数
+		for (const auto& buildDepString : buildDepStringList)
+		{
+			std::list<std::string> fileAndArguments, arguments;
+			StringSplit(buildDepString, "\\)\\(", fileAndArguments);
+
+			m_fileList.push_back(fileAndArguments.front());
+			fileAndArguments.pop_front();
+			if (!fileAndArguments.empty())
+			{
+				StringSplit(fileAndArguments.back(), " {2,}", arguments);		// 按照两个空格分割参数
+				for (auto& argumentStr : arguments)
+				{
+					if (argumentStr.find("-I") == 0 && argumentStr.rfind("\"") == (argumentStr.size() - 1))		// 为-I开头的行去除行尾"字符
+					{
+						argumentStr.erase(argumentStr.end() - 1);
+					}
+				}
+				arguments.push_back(toolchainPath);
+				
+			}
+			m_argumentsList.push_back(arguments);
+		}
+	}
 }
 
 uVConvertor::~uVConvertor()
@@ -139,15 +165,16 @@ void uVConvertor::printItems()
 	//
 	std::cout<<"-------------------------------"<<std::endl;
 	//使用迭代器输出list容器中的元素
-    for (std::list<std::string>::iterator it = incList.begin(); it != incList.end(); ++it) {
-        std::cout << *it << std::endl;
+	for (std::list<std::list<std::string>>::iterator args = m_argumentsList.begin(); args != m_argumentsList.end(); ++args) {
+		for (std::list<std::string>::iterator arg = args->begin(); arg != args->end(); ++arg)
+		{
+			std::cout << *arg << std::endl;
+		}
+		std::cout << "==============================" << std::endl;
     }
+
 	std::cout<<"-------------------------------"<<std::endl;
-    for (std::list<std::string>::iterator it = defList.begin(); it != defList.end(); ++it) {
-        std::cout << *it << std::endl;
-    }
-	std::cout<<"-------------------------------"<<std::endl;
-    for (std::list<std::string>::iterator it = fileList.begin(); it != fileList.end(); ++it) {
+    for (std::list<std::string>::iterator it = m_fileList.begin(); it != m_fileList.end(); ++it) {
         std::cout << *it << std::endl;
     }
 	std::cout<<"-------------------------------"<<std::endl;
@@ -162,43 +189,26 @@ void uVConvertor::printItems()
  **************************************************************/
 void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 {
-
-	//rebase file path in list
-	
-	//2.rebase 
-	for (std::list<std::string>::iterator it = incList.begin(); it != incList.end(); ++it) {
-        fs::path p(*it);
-		*it=p.lexically_relative(outPath).string();
-		StringReplace(*it,"\\\\","/");
-    }
-	for (std::list<std::string>::iterator it = fileList.begin(); it != fileList.end(); ++it) {
-        fs::path p(*it);
-		*it=p.lexically_relative(outPath).string();
-		StringReplace(*it,"\\\\","/");
-    }
-	
 	//extern options
 	std::list<std::string> extop;
-	StringSplit(extOptions,",",extop);
+	StringSplit(extOptions, ",", extop);
 
 	//export to json
 	json	 j,j1;
 	
 	//files
-	for (std::list<std::string>::iterator it = fileList.begin(); it != fileList.end(); ++it) {
+	for (std::list<std::string>::iterator it = m_fileList.begin(); it != m_fileList.end(); ++it) {
         j1.clear();
 		j1["file"]=*it;
-		j1["directory"]=outPath;
+		j1["directory"]=ifPath;
+		std::list<std::list<std::string>>::iterator args = m_argumentsList.begin();
 		//arguments
-			//include
-		for (std::list<std::string>::iterator inc = incList.begin(); inc != incList.end(); ++inc) {
-        j1["arguments"].push_back("-I"+*inc);
-    	}
-			//def
-		for (std::list<std::string>::iterator def = defList.begin(); def != defList.end(); ++def) {
-        j1["arguments"].push_back("-D"+*def);
-    	}
-			//extern options
+		for (std::list<std::string>::iterator arg = args->begin(); arg != args->end(); ++arg)
+		{
+			j1["arguments"].push_back(*arg);
+		}
+
+		//extern options
 		if(extop.size()!=0)
 		{
 			for (std::list<std::string>::iterator e = extop.begin(); e != extop.end(); ++e) 
@@ -206,7 +216,7 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
         		j1["arguments"].push_back(*e);
     		}
 		}
-		
+		m_argumentsList.pop_front();
 
 		j.push_back(j1);
     }
