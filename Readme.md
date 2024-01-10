@@ -24,12 +24,15 @@ uvConvertor-CLI.exe -f <path to .uvprojx file> -o <output path> [-e] <external o
 
 
 ## Build：
-
+### Clone Source Code
+* `git clone https://github.com/vankubo/uvConvertor.git`
+* `cd uvConvertor`
+* `git submodule update --init --recursive`
 ### Makefile
 
 It write under C++17,compiled with clang++. You can modify the project in Makefile.
 
-* Bild with cmd line `make`
+* Build with cmd line `make`
 
 ### Cmake
 
