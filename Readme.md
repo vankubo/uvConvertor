@@ -32,7 +32,7 @@ uvConvertor-CLI.exe -f <path to .uvprojx file> -o <output path> [-e] <external o
 
 It write under C++17,compiled with clang++. You can modify the project in Makefile.
 
-* Bild with cmd line `make`
+* Build with cmd line `make`
 
 ### Cmake
 
