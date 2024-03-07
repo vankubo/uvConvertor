@@ -20,6 +20,7 @@ target("uvConvertor-CLI")
     add_files(TINYXML_DIR.."/tinyxml2.cpp")
    
 
+target_end()
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
 --

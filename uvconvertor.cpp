@@ -6,6 +6,7 @@
 #include "utils.hpp"
 #include <string>
 #include <regex>
+#include <algorithm>
 
 namespace fs=std::filesystem;
 using namespace tinyxml2;
@@ -19,6 +20,12 @@ using namespace nlohmann;
  **************************************************************/
 uVConvertor::uVConvertor(std::string uvProjx, std::string target)
 {
+
+	/*Debug*/
+	//std::cout<<"[Debug]:Input file:"<<uvProjx<<std::endl;
+	replace(uvProjx.begin(),uvProjx.end(),'\\','/');
+	//std::cout<<"[Debug]:Input file:"<<uvProjx<<std::endl;
+
 	fs::path p(uvProjx);
 	ifPath=p.parent_path().string();
 	//加载文件
@@ -65,12 +72,23 @@ uVConvertor::uVConvertor(std::string uvProjx, std::string target)
 	// 获取编译生成的build.log.htm文件位置
 	std::string buildLogHtmPath;
 	buildLogHtmPath.append(ifPath + "/").append(outputDirectory->GetText()).append(outputName->GetText()).append(".build_log.htm");
+	
+	/*Debug*/
+	//std::cout<<"[Debug] log file:"<<buildLogHtmPath<<std::endl;
+	replace(buildLogHtmPath.begin(),buildLogHtmPath.end(),'\\','/');
+	//std::cout<<"[Debug] log file:"<<buildLogHtmPath<<std::endl;
+
 
 	// 获取编译生成的dep文件位置
 	std::string depFilePath;
 	depFilePath.append(ifPath + "/").append(outputDirectory->GetText())
 		.append(p.filename().replace_extension().string()).append("_")
 		.append(target_elm->FirstChildElement("TargetName")->GetText()).append(".dep");
+
+	/*Debug*/
+	//std::cout<<"[Debug] Dep file:"<<depFilePath<<std::endl;
+	replace(depFilePath.begin(),depFilePath.end(),'\\','/');
+	//std::cout<<"[Debug] Dep file:"<<depFilePath<<std::endl;
 
 	// 提示编译获取编译日志文件
 	if (!fs::exists(depFilePath))
@@ -223,7 +241,14 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 	
 	
 	// write prettified JSON to another file
-	std::ofstream o(outPath+"\\compile_commands.json");
+	outPath.append("/compile_commands.json");
+
+	/*debug*/
+	//std::cout<<"[Debug] output file:"<<outPath<<std::endl;
+	replace(outPath.begin(),outPath.end(),'\\','/');
+	//std::cout<<"[Debug] output file:"<<outPath<<std::endl;
+
+	std::ofstream o(outPath);
 	o << std::setw(4) << j << std::endl;
 
 }
