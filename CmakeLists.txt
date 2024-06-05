@@ -27,4 +27,7 @@ include_directories(${TINYXML_DIR})
 set(SOURCE_FILES main.cpp uvconvertor.cpp utils.cpp ${TINYXML_DIR}/tinyxml2.cpp)
 SET(EXECUTABLE_OUTPUT_PATH ..)
 add_executable(uvConvertor-CLI ${SOURCE_FILES})
+
+target_link_libraries(uvConvertor-CLI -static-libgcc -static-libstdc++)
+
 #set_target_properties(prog PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Release>:Release>")
