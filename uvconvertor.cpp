@@ -223,6 +223,29 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 		//arguments
 		for (std::list<std::string>::iterator arg = args->begin(); arg != args->end(); ++arg)
 		{
+			std::string arg_str = *arg;
+
+			//clangd can't handle -imacros argument with space
+			std::size_t found = arg_str.find("--imacros ");
+			if (found != std::string::npos)
+			{
+				j1["arguments"].push_back("--imacros");
+				arg_str.replace(found, 10, "");
+				j1["arguments"].push_back(arg_str);
+				continue;
+			}
+			
+			found = arg_str.find("-imacros ");
+			if (found != std::string::npos)
+			{
+				j1["arguments"].push_back("-imacros");
+				arg_str.replace(found, 9, "");
+				j1["arguments"].push_back(arg_str);
+				continue;
+			}
+
+
+
 			j1["arguments"].push_back(*arg);
 		}
 
