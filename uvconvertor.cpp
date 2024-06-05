@@ -244,6 +244,14 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 				continue;
 			}
 
+			found = arg_str.find("-preinclude=");
+			if (found != std::string::npos)
+			{
+				j1["arguments"].push_back("-imacros");
+				arg_str.replace(found, 12, "");
+				j1["arguments"].push_back(arg_str);
+				continue;
+			}
 
 
 			j1["arguments"].push_back(*arg);
