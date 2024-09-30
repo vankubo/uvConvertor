@@ -253,6 +253,53 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 				continue;
 			}
 
+			// Remove quotes from -D arguments
+            if (arg_str.find("-D") == 0) {
+                std::size_t quote_start = arg_str.find('"');
+                std::size_t quote_end = arg_str.rfind('"');
+                if (quote_start != std::string::npos && quote_end != std::string::npos && quote_end > quote_start) {
+                    arg_str.erase(quote_start, 1); // Remove starting quote
+                    arg_str.erase(quote_end - 1, 1); // Remove ending quote
+                }
+				j1["arguments"].push_back(arg_str);
+				continue;
+            }
+
+			found = arg_str.find("--diag_suppress=");
+			if (found != std::string::npos)
+			{
+				continue;
+			}
+
+			found = arg_str.find("-o ");
+			if (found != std::string::npos)
+			{
+				continue;
+			}
+
+			found = arg_str.find("--depend ");
+			if (found != std::string::npos)
+			{
+				continue;
+			}
+
+			found = arg_str.find("--apcs=");
+			if (found != std::string::npos)
+			{
+				continue;
+			}
+
+			found = arg_str.find("--split_sections");
+			if (found != std::string::npos)
+			{
+				continue;
+			}
+
+			found = arg_str.find("--cpu ");
+			if (found != std::string::npos)
+			{
+				continue;
+			}
 
 			j1["arguments"].push_back(*arg);
 		}
@@ -262,6 +309,10 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 		{
 			for (std::list<std::string>::iterator e = extop.begin(); e != extop.end(); ++e) 
 			{
+				std::string arg_str = *e;
+				if (arg_str.empty()) {
+					continue;
+				}
         		j1["arguments"].push_back(*e);
     		}
 		}
