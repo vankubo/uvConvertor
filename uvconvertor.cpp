@@ -318,7 +318,8 @@ void uVConvertor::toCompileJson(std::string outPath,std::string extOptions)
 		}
 		m_argumentsList.pop_front();
 
-		j.push_back(j1);
+		if (j1.contains("arguments"))
+			j.push_back(j1);
     }
 	
 	
